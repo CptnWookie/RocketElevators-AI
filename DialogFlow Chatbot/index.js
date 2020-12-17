@@ -1,68 +1,66 @@
 'use strict';
-
 const axios = require('axios');
-
 const functions = require('firebase-functions');
 const {WebhookClient} = require('dialogflow-fulfillment');
 const {Card, Suggestion} = require('dialogflow-fulfillment');
-
 process.env.DEBUG = 'dialogflow:debug'; // enables lib debugging statements
-
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, response) => {
   const agent = new WebhookClient({ request, response });
   console.log('Dialogflow Request headers: ' + JSON.stringify(request.headers));
   console.log('Dialogflow Request body: ' + JSON.stringify(request.body));
-  
   function welcome(agent) {
     agent.add(`Welcome to my agent!`);
   }
-  
   function fallback(agent) {
     agent.add(`I didn't understand`);
     agent.add(`I'm sorry, can you try again?`);
   }
-  
   function statusHandler(agent){
     const idnumber = agent.parameters.idnumber;  
     return axios.get(`https://restapi2020.azurewebsites.net/api/elevators/status/${idnumber}`)
     .then((result) => {
       console.log(result);
-      agent.add('Elevator ' + agent.parameters.idnumber + ' status: '+ result.data); 
+      agent.add('Elevator ' + agent.parameters.idnumber + ' is a '+ result.data); 
     });
   }
-  
+  function customerHandler(agent){
+    const idnumber = agent.parameters.idnumber;  
+    return axios.get(`https://restapi2020.azurewebsites.net/api/customers/${idnumber}`)
+    .then((result) => {
+      agent.add('Customer ' + agent.parameters.idnumber + ' is a '+ result.data.company_description + ' company.'); 
+    });
+  }
+  function interventionHandler(agent){
+    const idnumber = agent.parameters.idnumber;  
+    return axios.get(`https://restapi2020.azurewebsites.net/api/interventions/${idnumber}`)
+    .then((result) => {
+      agent.add('Elevator ' + agent.parameters.idnumber + ' is in '+ result.status + ' this intervention started on '+ result.data.start_date_time_intervention); 
+    });
+  }
   function elevatorsCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/elevators`);
   }
-  
   function elevatorsNotRunningCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/elevators/not-operating`);
   }
-  
   function batteriesCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/batteries`);
   }
-  
   function buildingsCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/buildings`);
   }
-  
   function citiesCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/addresses/cities`);
   }
-  
   function customersCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/customers`);
   }
-  
   function quotesCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/quotes`);
   }
-  
   function leadsCountHandler(agent){
     return axios.get(`https://restapi2020.azurewebsites.net/api/leads`);
   }
-  
   function infoFromApiHandler(agent) {
     return axios.all([elevatorsCountHandler(), elevatorsNotRunningCountHandler(), batteriesCountHandler(), buildingsCountHandler(), citiesCountHandler(), customersCountHandler(), quotesCountHandler(), leadsCountHandler()])
     .then(axios.spread(function (elevators, buildings, customers, elevatorsnotrunning, batteries, cities, quotes, leads) {
@@ -77,13 +75,11 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
       agent.add(`Greetings! There are ${elevatorsTotal} elevators deployed in the ${buildingsTotal} buildings of your ${customersTotal} customers. Currently, ${elevatorsNotRunningTotal} elevators are not in Running Status and are being serviced. ${batteriesTotal} Batteries are deployed across ${citiesTotal} cities. On another note you currently have ${quotesTotal} quotes awaiting processing. You also have ${leadsTotal} leads in your contact requests.`);
      }));
   }
-  
-  
   let intentMap = new Map();
   intentMap.set('Default Welcome Intent', welcome);
   intentMap.set('Default Fallback Intent', fallback);
-  intentMap.set('status', statusHandler);
-  intentMap.set('infoFromApi', infoFromApiHandler);
+  intentMap.set('status of elevator', statusHandler);
+  intentMap.set('InfoFromApi', infoFromApiHandler);
   intentMap.set('elevatorsCount', elevatorsCountHandler);
   intentMap.set('elevatorsNotRunningCount', elevatorsNotRunningCountHandler);
   intentMap.set('batteriesCount', batteriesCountHandler);
@@ -92,5 +88,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   intentMap.set('customersCount', customersCountHandler);
   intentMap.set('quotesCount', quotesCountHandler);
   intentMap.set('leadsCount', leadsCountHandler);
+  intentMap.set('customer', customerHandler);
+  intentMap.set('intervention', interventionHandler);
   agent.handleRequest(intentMap);
 });
