@@ -79,7 +79,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   intentMap.set('Default Welcome Intent', welcome);
   intentMap.set('Default Fallback Intent', fallback);
   intentMap.set('status of elevator', statusHandler);
-  intentMap.set('InfoFromApi', infoFromApiHandler);
+  intentMap.set('infoFromApi', infoFromApiHandler);
   intentMap.set('elevatorsCount', elevatorsCountHandler);
   intentMap.set('elevatorsNotRunningCount', elevatorsNotRunningCountHandler);
   intentMap.set('batteriesCount', batteriesCountHandler);
