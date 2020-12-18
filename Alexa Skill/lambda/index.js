@@ -4,6 +4,7 @@
  * session persistence, api calls, and more.
  * */
 const Alexa = require('ask-sdk-core');
+const http = require("https");
 
 const getRemoteData = function(url) {
   return new Promise((resolve, reject) => {
@@ -19,6 +20,75 @@ const getRemoteData = function(url) {
     request.on("error", err => reject(err));
   });
 };
+
+// ----- the 2 next function are to change elevator status with id and status -----
+const ChangeStatusHandler = {
+  canHandle(handlerInput) {
+    return (
+      handlerInput.requestEnvelope.request.type === "IntentRequest" &&
+      handlerInput.requestEnvelope.request.intent.name === "ChangeStatusIntent"
+    );
+  },
+  async handle(handlerInput) {
+    const elevatorID = handlerInput.requestEnvelope.request.intent.slots.id.value;
+    const status = handlerInput.requestEnvelope.request.intent.slots.status.value;
+    var capitalizedStatus = uppercaseFirstCharacter(status);
+
+    //var result = await httpPutElevatorStatus(elevatorID, capitalizedStatus);
+    let say = "";
+    
+    await httpPutElevatorStatus(elevatorID, capitalizedStatus)
+            .then((response) => {
+                say = response;
+            })
+            .catch((err) => {
+                say = err.message;
+                console.log(`ERROR: ${err.message}`);
+            });
+    
+    //let say = result;
+
+    return handlerInput.responseBuilder
+      .speak(say)
+      .reprompt()
+      .getResponse();
+  }
+};
+
+const httpPutElevatorStatus = (elevatorID, capitalizedStatus) => new Promise((resolve, reject) => {
+  //return new Promise((resolve, reject) => {
+    const putData = `{"status":"${capitalizedStatus}"}`;
+    
+    console.log(elevatorID, capitalizedStatus);
+    var options = {
+      hostname: "restapi2020.azurewebsites.net", // here is the end points
+      path: `/api/Elevators/4`,
+      headers: {
+        "Content-Type": "application/json"
+        //"Content-Length": Buffer.byteLength(putData)
+      },
+      method: "PUT"
+    };
+    var req = http.request(options, res => {
+      var responseString = "";
+      res.on("data", chunk => {
+        responseString = responseString + chunk;
+      });
+      res.on("end", () => {
+        console.log("Received: " + responseString);
+        resolve(responseString);
+      });
+      res.on("error", e => {
+        console.log("ERROR: " + e);
+        reject();
+      });
+    });
+    
+    req.on('error', (err) => reject(err));
+    req.write(putData);
+    req.end();
+    
+})
 
 const GetGreetingsHandler = {
   canHandle(handlerInput) {
@@ -138,6 +208,86 @@ const GetStatusHandler = {
   }
 };
 
+//all elevator info 
+const GetElevatorInfoHandler = {
+  canHandle(handlerInput) {
+    return (
+      handlerInput.requestEnvelope.request.type === "IntentRequest" &&
+      handlerInput.requestEnvelope.request.intent.name ===
+        "GetElevatorInfoIntent"
+    );
+  },
+  async handle(handlerInput) {
+    let outputSpeech = "This is the default message.";
+    const id = handlerInput.requestEnvelope.request.intent.slots.idtype.value;
+
+    const elevatorData = await getRemoteData(
+      "https://restapi2020.azurewebsites.net/api/elevators/" + id
+    );
+
+    const inspectionCertificate = JSON.parse(elevatorData).inspection_certificate;
+    const elevatorstatus = JSON.parse(elevatorData).status;
+    const elevatorclass = JSON.parse(elevatorData).model;
+
+
+    outputSpeech = `the elevator ${id} status is ${elevatorstatus}. The last inspection certificate number is  ${inspectionCertificate}. The elevator model is ${elevatorclass}.`;
+
+    return handlerInput.responseBuilder
+      .speak(outputSpeech)
+      .reprompt()
+      .getResponse();
+  }
+};
+
+// customer info
+const GetCustomerInfoHandler = {
+  canHandle(handlerInput) {
+    return (
+      handlerInput.requestEnvelope.request.type === "IntentRequest" &&
+      handlerInput.requestEnvelope.request.intent.name ===
+        "GetCustomerInfoHandler"
+    );
+  },
+  async handle(handlerInput) {
+    let outputSpeech = "This is the default message.";
+    const id = handlerInput.requestEnvelope.request.intent.slots.idtype.value;
+
+    const customerData = await getRemoteData(
+      "https://restapi2020.azurewebsites.net/api/customers/" + id
+    );
+
+    const customerName = JSON.parse(customerData).company_name;
+    const companyContact = JSON.parse(customerData).full_name_company_contact;
+    const companyPhone = JSON.parse(customerData).company_contact_phone;
+
+
+    outputSpeech = `The name of the company with ID ${id}  is ${customerName}. The company contact's name is ${companyContact} and the phone number is ${companyPhone}.`;
+
+    return handlerInput.responseBuilder
+      .speak(outputSpeech)
+      .reprompt()
+      .getResponse();
+  }
+};
+
+// goodbye
+const GoodbyeHandler = {
+  canHandle(handlerInput) {
+    return (
+      handlerInput.requestEnvelope.request.type === "IntentRequest" &&
+      (handlerInput.requestEnvelope.request.intent.name ===
+        "AMAZON.CancelIntent" ||
+        handlerInput.requestEnvelope.request.intent.name ===
+          "AMAZON.StopIntent")
+    );
+  },
+  handle(handlerInput) {
+    const speechText = "Goodbye!";
+
+    return handlerInput.responseBuilder.speak(speechText).getResponse();
+  }
+};
+
 const ErrorHandler = {
   canHandle() {
     return true;
@@ -152,16 +302,23 @@ const ErrorHandler = {
   }
 };
 
+function uppercaseFirstCharacter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 const skillBuilder = Alexa.SkillBuilders.custom();
 
 exports.handler = skillBuilder
   .addRequestHandlers(
     GetGreetingsHandler,
     GetRemoteDataHandler,
-    GetStatusHandler
-    //HelpIntentHandler,
-    //CancelAndStopIntentHandler,
-    //SessionEndedRequestHandler
+    GetStatusHandler,
+    GetElevatorInfoHandler,
+    GoodbyeHandler,
+    GetCustomerInfoHandler,
+    GetRemoteDataHandler,
+    ChangeStatusHandler
+    
   )
-  //.addErrorHandlers(ErrorHandler)
+  .addErrorHandlers(ErrorHandler)
   .lambda();

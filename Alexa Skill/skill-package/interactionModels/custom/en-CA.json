@@ -60,9 +60,74 @@
             "what is the status of elevator {idtype}",
             "Can you tell me the status of elevator {idtype}"
           ]
+        },
+        {
+          "name": "GetElevatorInfoIntent",
+          "slots": [
+            {
+              "name": "idtype",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "what\u0027s going on with elevator {idtype}",
+            "tell me about elevator {idtype}"
+          ]
+        },
+        {
+          "name": "GoodbyeIntent",
+          "slots": [],
+          "samples": [
+            "talk to you later",
+            "That\u0027s all i need ",
+            "Thank you"
+          ]
+        },
+        {
+          "name": "GetCustomerInfoHandler",
+          "slots": [
+            {
+              "name": "idtype",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "who is customer {idtype}",
+            "what is the information for customer {idtype}",
+            "tell me about customer {idtype}"
+          ]
+        },
+        {
+          "name": "ChangeStatusIntent",
+          "slots": [
+            {
+              "name": "id",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "status",
+              "type": "Status"
+            }
+          ],
+          "samples": [
+            "change the status of elevator {id} to {status}",
+            "change elevator {id} status to {status}",
+            "change status to {status} for elevator {id}"
+          ]
         }
       ],
-      "types": [],
+      "types": [
+        {
+          "values": [
+            {
+              "name": {
+                "value": "status"
+              }
+            }
+          ],
+          "name": "Status"
+        }
+      ],
       "modelConfiguration": {
         "fallbackIntentSensitivity": {
           "level": "LOW"
@@ -70,5 +135,5 @@
       }
     }
   },
-  "version": "13"
+  "version": "20"
 }
