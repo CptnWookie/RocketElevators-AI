@@ -44,4 +44,4 @@ Alexa's functionality starts with a voice brief that allows an employee to inqui
 
 # See more at the video:
 
-VIDEO HERE
+VIDEO HERE https://youtu.be/Y6h26qx3Jtk
